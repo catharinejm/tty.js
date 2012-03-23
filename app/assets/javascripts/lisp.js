@@ -1,4 +1,4 @@
-var LISP = {};
+LISP = {};
 
 $(function() {
   $('#buffer').focus();
@@ -8,9 +8,9 @@ $(function() {
 
   function initREPL(pageData) {
     var navMap = buildMapFromDOM($(pageData).find('nav'));
-    LISP.command = $('span#command');
-    LISP.cursor = $('span#cursor');
-    LISP.afterCursor = $('span#after-cursor');
+    LISP.command = $('span.command');
+    LISP.cursor = $('span.cursor');
+    LISP.afterCursor = $('span.after-cursor');
     LISP.typing = 0;
     LISP.input = "";
     blinkCursor(800);
@@ -21,7 +21,7 @@ $(function() {
     setInterval(function() {
       if (LISP.typing) return;
 
-      // LISP.cursor.toggleClass('show-cursor');
+      LISP.cursor.toggleClass('show-cursor');
     }, interval);
   }
 
@@ -59,7 +59,7 @@ $(function() {
         LISP.command.html(LISP.command.html() + "&nbsp;");
         break;
       default:
-        LISP.command.text(LISP.command.text() + String.fromCharCode(e.which));
+        if (! e.altKey) LISP.command.text(LISP.command.text() + String.fromCharCode(e.which));
       }
     });
 
@@ -72,6 +72,8 @@ $(function() {
 
       switch (e.which) {
       // Backward delete
+      case 72: // H
+        if (! e.ctrlKey) break;
       case 8: // Backspace
         var text = LISP.command.text();
         LISP.command.html(escapeSpaces(text.substr(0, text.length-1)));
@@ -97,14 +99,22 @@ $(function() {
 
       // cursor left
       case 66: // B
-        if (! e.ctrlKey) break;
+        if (e.ctrlKey)
+          moveLeft();
+        else if (e.altKey)
+          moveBackWord();
+        break;
       case 37: // Left arrow
         moveLeft();
         break;
 
       // cursor right
       case 70: // F
-        if (! e.ctrlKey) break;
+        if (e.ctrlKey)
+          moveRight();
+        else if (e.altKey)
+          moveForwardWord();
+        break;
       case 39: // Right arrow
         moveRight();
         break;
@@ -140,6 +150,15 @@ $(function() {
     LISP.command.html(escapeSpaces(text.substr(0, text.length-1)));
   }
 
+  function moveBackWord() {
+    var match = LISP.command.text().match(/^(.*)\b(\w+\W*)$/);
+    var before = match[1], after = match[2];
+
+    LISP.afterCursor.html(escapeSpaces(after.substr(1,after.length)) + LISP.cursor.html() + LISP.afterCursor.html());
+    LISP.cursor.html(escapeSpaces(after[0]));
+    LISP.command.html(escapeSpaces(before));
+  }
+
   function moveRight() {
     var afterText = LISP.afterCursor.text();
     if (! afterText) return;
@@ -149,6 +168,15 @@ $(function() {
     LISP.command.html(escapeSpaces(text + LISP.cursor.text()));
     LISP.cursor.html(escapeSpaces(afterText[0]));
     LISP.afterCursor.html(escapeSpaces(afterText.substr(1, afterText.length)));
+  }
+
+  function moveForwardWord() {
+    var match = LISP.afterCursor.text().match(/^(\W*\w+)\b(.*)$/);
+    var before = match[1], after = match[2];
+
+    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeSpaces(before));
+    LISP.cursor.html(escapeSpaces(after[0]));
+    LISP.afterCursor.html(escapeSpaces(after.substr(1, after.length)));
   }
 
   function moveToBeginning() {
@@ -178,12 +206,14 @@ $(function() {
     var newLine = currentLine.clone();
     currentLine.removeClass("current");
     currentLine.html("REPL&gt;&nbsp" + escapeSpaces(LISP.command.text()));
-    newLine.find('#command').html('');
-    newLine.find('#cursor').addClass("show-cursor");
+
+    newLine.find('.command').html('');
+    newLine.find('.cursor').addClass("show-cursor");
     newLine.insertAfter(currentLine);
 
-    LISP.command = $('#command');
-    LISP.cursor = $('#cursor');
+    LISP.command = $('.command');
+    LISP.cursor = $('.cursor');
+    LISP.afterCursor = $('.after-cursor');
     $('#buffer').val('');
   }
 

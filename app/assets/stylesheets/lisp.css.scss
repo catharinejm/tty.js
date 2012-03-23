@@ -8,24 +8,26 @@ body {
 #repl {
   li { 
     list-style: none;
+
+    span {
+      &.command, &.cursor, &.after-cursor {
+        display: inline-block;
+        margin-left: -10px;
+      }
+
+      &.cursor { 
+        width: 10px;
+        height: 20px;
+        border-bottom: 2px solid #000;
+        &.show-cursor {
+          border-bottom: 2px solid #FFF;
+        }
+      }
+      &.prompt { margin-right: 10px; }
+    }
   }
 }
 
-#prompt { margin-right: 0.5em; }
-
-#command, #cursor, #after-cursor {
-  display: inline-block;
-  margin-left: -0.5em;
-}
-
-#cursor { 
-  width: 10px;
-  height: 20px;
-  border-bottom: 2px solid #000;
-  &.show-cursor {
-    border-bottom: 2px solid #FFF;
-  }
-}
 
 // #cursor {
 //   margin-left: -1em;
