@@ -11,6 +11,7 @@ $(function() {
     LISP.cursor = $('span#cursor');
     LISP.typing = 0;
     LISP.command = $('span#command');
+    LISP.input = "";
     blinkCursor(800);
     captureKeys();
   }
@@ -19,10 +20,7 @@ $(function() {
     setInterval(function() {
       if (LISP.typing) return;
 
-      if (LISP.cursor.text() == "_")
-        LISP.cursor.text("");
-      else
-        LISP.cursor.text("_");
+      LISP.cursor.toggleClass('show-cursor');
     }, interval);
   }
 
@@ -31,7 +29,7 @@ $(function() {
     function typingEvent(element, eventName, bindingFn) {
       $(element).bind(eventName, function(e) {
         LISP.typing++;
-        LISP.cursor.text("_");
+        LISP.cursor.addClass("show-cursor");
 
         bindingFn(e);
 
@@ -40,9 +38,19 @@ $(function() {
     }
 
     typingEvent(document, "keypress", function(e) {
-      var newChar;
       switch(e.which) {
-      case 32:
+      case 3: // C-c
+        LISP.command.text(LISP.command.text() + "^C");
+        drawNewLine();
+        break;
+      case 13: // CR
+        bufferInput();
+        drawNewLine();
+        break;
+      case 21: // C-u
+        LISP.command.html("");
+        break;
+      case 32: // Space
         LISP.command.html(LISP.command.html() + "&nbsp;");
         break;
       default:
@@ -60,6 +68,24 @@ $(function() {
         LISP.command.html(text.substr(0, text.length-1).replace(/\s/g, "&nbsp;"));
       }
     });
+  }
+
+  function bufferInput() {
+    LISP.input += LISP.command.text();
+  }
+
+  function drawNewLine() {
+    var currentLine = $("li.current");
+    var newLine = currentLine.clone();
+    currentLine.removeClass("current");
+    currentLine.html("REPL&gt;&nbsp" + LISP.command.text().replace(/\s/g, "&nbsp;"));
+    newLine.find('#command').html('');
+    newLine.find('#cursor').addClass("show-cursor");
+    newLine.insertAfter(currentLine);
+
+    LISP.command = $('#command');
+    LISP.cursor = $('#cursor');
+    $('#buffer').val('');
   }
 
   function buildMapFromDOM(jqDOM) {
