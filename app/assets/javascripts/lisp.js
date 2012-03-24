@@ -1,4 +1,4 @@
-LISP = {};
+TTY = {};
 
 $(function() {
   $('#buffer').focus();
@@ -8,20 +8,20 @@ $(function() {
 
   function initREPL(pageData) {
     var navMap = buildMapFromDOM($(pageData).find('nav'));
-    LISP.command = $('span.command');
-    LISP.cursor = $('span.cursor');
-    LISP.afterCursor = $('span.after-cursor');
-    LISP.typing = 0;
-    LISP.input = "";
+    TTY.command = $('span.command');
+    TTY.cursor = $('span.cursor');
+    TTY.afterCursor = $('span.after-cursor');
+    TTY.typing = 0;
+    TTY.input = "";
     blinkCursor(800);
     captureKeys();
   }
 
   function blinkCursor(interval) {
     setInterval(function() {
-      if (LISP.typing) return;
+      if (TTY.typing) return;
 
-      LISP.cursor.toggleClass('show-cursor');
+      TTY.cursor.toggleClass('show-cursor');
     }, interval);
   }
 
@@ -29,12 +29,12 @@ $(function() {
 
     function typingEvent(element, eventName, bindingFn) {
       $(element).bind(eventName, function(e) {
-        LISP.typing++;
-        LISP.cursor.addClass("show-cursor");
+        TTY.typing++;
+        TTY.cursor.addClass("show-cursor");
 
         bindingFn(e);
 
-        setTimeout(function() { LISP.typing--; }, 200);
+        setTimeout(function() { TTY.typing--; }, 200);
       });
     }
 
@@ -43,23 +43,26 @@ $(function() {
 
       switch(e.which) {
       case 3: // C-c
-        LISP.command.text(LISP.command.text() + "^C");
+        TTY.command.text(TTY.command.text() + "^C");
         drawNewLine();
+        break;
+      case 12: // C-l
+        $("li.current").prevAll().remove();
         break;
       case 13: // CR
         bufferInput();
         drawNewLine();
         break;
       case 21: // C-u
-        LISP.command.html("");
-        LISP.cursor.html("&nbsp;");
-        LISP.afterCursor.html("");
+        TTY.command.html("");
+        TTY.cursor.html("&nbsp;");
+        TTY.afterCursor.html("");
         break;
       case 32: // Space
-        LISP.command.html(LISP.command.html() + "&nbsp;");
+        TTY.command.html(TTY.command.html() + "&nbsp;");
         break;
       default:
-        if (! (e.altKey || e.ctrlKey)) LISP.command.text(LISP.command.text() + String.fromCharCode(e.which));
+        if (! (e.altKey || e.ctrlKey)) TTY.command.text(TTY.command.text() + String.fromCharCode(e.which));
       }
     });
 
@@ -89,18 +92,18 @@ $(function() {
           deleteForwardWord();
         break;
       case 46: // DEL
-        var text = LISP.afterCursor.text();
+        var text = TTY.afterCursor.text();
         if (text) {
-          LISP.cursor.html(escapeHTML(text[0]));
-          LISP.afterCursor.html(escapeHTML(text.substr(1, text.length)));
+          TTY.cursor.html(escapeHTML(text[0]));
+          TTY.afterCursor.html(escapeHTML(text.substr(1, text.length)));
         }
         break;
 
       // Clear to end
       case 75: // K
         if (! e.ctrlKey) break;
-        LISP.cursor.html("&nbsp;");
-        LISP.afterCursor.html('');
+        TTY.cursor.html("&nbsp;");
+        TTY.afterCursor.html('');
         break;
 
       // cursor left
@@ -147,17 +150,17 @@ $(function() {
   }
 
   function moveLeft() {
-    if (LISP.command.text() == "") return;
+    if (TTY.command.text() == "") return;
 
-    var text = LISP.command.text();
-    var afterText = LISP.afterCursor.text();
-    LISP.afterCursor.html(escapeHTML(LISP.cursor.text() + afterText));
-    LISP.cursor.html(escapeHTML(text[text.length-1]));
-    LISP.command.html(escapeHTML(text.substr(0, text.length-1)));
+    var text = TTY.command.text();
+    var afterText = TTY.afterCursor.text();
+    TTY.afterCursor.html(escapeHTML(TTY.cursor.text() + afterText));
+    TTY.cursor.html(escapeHTML(text[text.length-1]));
+    TTY.command.html(escapeHTML(text.substr(0, text.length-1)));
   }
 
   function matchBack() {
-    return LISP.command.text().match(/^(.*)\b(\w+\W*)$/);
+    return TTY.command.text().match(/^(.*)\b(\w+\W*)$/);
   }
 
   function moveBackWord() {
@@ -166,36 +169,36 @@ $(function() {
 
     var before = match[1], after = match[2];
 
-    LISP.afterCursor.html(escapeHTML(after.substr(1,after.length)) + LISP.cursor.html() + LISP.afterCursor.html());
-    LISP.cursor.html(escapeHTML(after[0]));
-    LISP.command.html(escapeHTML(before));
+    TTY.afterCursor.html(escapeHTML(after.substr(1,after.length)) + TTY.cursor.html() + TTY.afterCursor.html());
+    TTY.cursor.html(escapeHTML(after[0]));
+    TTY.command.html(escapeHTML(before));
   }
 
   function deleteBack() {
-    var text = LISP.command.text();
-    LISP.command.html(escapeHTML(text.substr(0, text.length-1)));
+    var text = TTY.command.text();
+    TTY.command.html(escapeHTML(text.substr(0, text.length-1)));
   }
 
   function deleteBackWord() {
     var match = matchBack();
 
     if (match)
-      LISP.command.html(escapeHTML(match[1]));
+      TTY.command.html(escapeHTML(match[1]));
   }
 
   function moveRight() {
-    var afterText = LISP.afterCursor.text();
+    var afterText = TTY.afterCursor.text();
     if (! afterText) return;
 
-    var text = LISP.command.text();
+    var text = TTY.command.text();
 
-    LISP.command.html(escapeHTML(text + LISP.cursor.text()));
-    LISP.cursor.html(escapeHTML(afterText[0]));
-    LISP.afterCursor.html(escapeHTML(afterText.substr(1, afterText.length)));
+    TTY.command.html(escapeHTML(text + TTY.cursor.text()));
+    TTY.cursor.html(escapeHTML(afterText[0]));
+    TTY.afterCursor.html(escapeHTML(afterText.substr(1, afterText.length)));
   }
 
   function matchForward() {
-    return LISP.afterCursor.text().match(/^(\W*\w+)\b(.*)$/);
+    return TTY.afterCursor.text().match(/^(\W*\w+)\b(.*)$/);
   }
 
   function moveForwardWord() {
@@ -204,16 +207,16 @@ $(function() {
 
     var before = match[1], after = match[2];
 
-    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeHTML(before));
-    LISP.cursor.html(escapeHTML(after[0]));
-    LISP.afterCursor.html(escapeHTML(after.substr(1, after.length)));
+    TTY.command.html(TTY.command.html() + TTY.cursor.html() + escapeHTML(before));
+    TTY.cursor.html(escapeHTML(after[0]));
+    TTY.afterCursor.html(escapeHTML(after.substr(1, after.length)));
   }
 
   function deleteForward() {
-    var text = LISP.afterCursor.text();
+    var text = TTY.afterCursor.text();
     if (text) {
-      LISP.cursor.html(escapeHTML(text[0]));
-      LISP.afterCursor.html(escapeHTML(text.substr(1, text.length)));
+      TTY.cursor.html(escapeHTML(text[0]));
+      TTY.afterCursor.html(escapeHTML(text.substr(1, text.length)));
     }
   }
 
@@ -221,45 +224,45 @@ $(function() {
     var match = matchForward();
     if (! match) return;
     var after = match[2];
-    LISP.cursor.html(escapeHTML(after[0]));
-    LISP.afterCursor.html(escapeHTML(after.substr(1, after.length)));
+    TTY.cursor.html(escapeHTML(after[0]));
+    TTY.afterCursor.html(escapeHTML(after.substr(1, after.length)));
   }
 
   function moveToBeginning() {
-    var text = LISP.command.text();
+    var text = TTY.command.text();
     if (! text) return;
 
-    LISP.afterCursor.html(escapeHTML(text.substr(1, text.length)) + LISP.cursor.html() + LISP.afterCursor.html());
-    LISP.cursor.html(escapeHTML(text[0]));
-    LISP.command.html("");
+    TTY.afterCursor.html(escapeHTML(text.substr(1, text.length)) + TTY.cursor.html() + TTY.afterCursor.html());
+    TTY.cursor.html(escapeHTML(text[0]));
+    TTY.command.html("");
   }
 
   function moveToEnd() {
-    var afterText = LISP.afterCursor.text();
+    var afterText = TTY.afterCursor.text();
     if (! afterText) return;
 
-    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeHTML(afterText));
-    LISP.cursor.html("&nbsp;");
-    LISP.afterCursor.html('');
+    TTY.command.html(TTY.command.html() + TTY.cursor.html() + escapeHTML(afterText));
+    TTY.cursor.html("&nbsp;");
+    TTY.afterCursor.html('');
   }
 
   function bufferInput() {
-    LISP.input += LISP.command.text();
+    TTY.input += TTY.command.text();
   }
 
   function drawNewLine() {
     var currentLine = $("li.current");
     var newLine = currentLine.clone();
     currentLine.removeClass("current");
-    currentLine.html("REPL&gt;&nbsp" + escapeHTML(LISP.command.text()));
+    currentLine.html("REPL&gt;&nbsp" + escapeHTML(TTY.command.text()));
 
     newLine.find('.command').html('');
     newLine.find('.cursor').addClass("show-cursor");
     newLine.insertAfter(currentLine);
 
-    LISP.command = $('.command');
-    LISP.cursor = $('.cursor');
-    LISP.afterCursor = $('.after-cursor');
+    TTY.command = $('.command');
+    TTY.cursor = $('.cursor');
+    TTY.afterCursor = $('.after-cursor');
     $('#buffer').val('');
   }
 
