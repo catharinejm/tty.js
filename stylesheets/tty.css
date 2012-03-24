@@ -1,6 +1,5 @@
 body {
   background: #000;
-  /* font-family: "Monaco", Monaco, sans-serif; */
   font-family: Monaco, Courier, "Courier New";
   color: #FFF;
 }
@@ -8,7 +7,9 @@ body {
 #tty li {
   list-style: none;
 }
-#tty li span.command, #tty li span.cursor, #tty li span.after-cursor {
+#tty li span.command,
+#tty li span.cursor,
+#tty li span.after-cursor {
   display: inline-block;
   margin-left: -10px;
 }
@@ -27,4 +28,6 @@ body {
 #buffer {
   position: fixed;
   top: -100px;
+  width: 1px;
+  height: 1px;
 }

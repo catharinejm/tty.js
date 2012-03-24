@@ -1,25 +1,25 @@
-TTY = {};
-
 (function($) {
-  TTY.init = function(jqObj, promptStr) {
+  var TTY = {};
+
+  TTY.init = function(jqObj, promptStr, readerFn) {
     TTY.console = jqObj;
     initConsole();
 
+    var $T = TTY.console.find.bind(TTY.console);
+
+    TTY.screen = $T('ul');
     TTY.command = $T('span.command');
     TTY.cursor = $T('span.cursor');
     TTY.afterCursor = $T('span.after-cursor');
     TTY.typing = 0;
-    TTY.input = "";
-    TTY.promptStr = escapeHTML(promptStr);
-    $T('span.prompt').html(TTY.promptStr);
+    TTY.promptStr = promptStr;
+    TTY.prompt = $T('span.prompt');
+    TTY.prompt.html(escapeHTML(TTY.promptStr));
+    TTY.readerFn = readerFn;
 
 
     blinkCursor(800);
     captureKeys();
-
-    function $T(selector) {
-      return TTY.console.find(selector);
-    }
 
     function initConsole() {
       TTY.console.html(
@@ -68,8 +68,8 @@ TTY = {};
           $T("li.current").prevAll().remove();
           break;
         case 13: // CR
-          bufferInput();
-          drawNewLine();
+          moveToEnd();
+          consumeLine();
           break;
         case 21: // C-u
           TTY.command.html("");
@@ -264,28 +264,50 @@ TTY = {};
       TTY.afterCursor.html('');
     }
 
-    function bufferInput() {
-      TTY.input += TTY.command.text();
+    function consumeLine() {
+      var output = TTY.readerFn(TTY.command.text());
+      if (output === false) {
+        var newPrompt = "", i;
+        for (i = 0; i < TTY.promptStr.length; i++) newPrompt += "&nbsp;";
+        drawNewLine(newPrompt);
+      } else {
+        printOutput(output);
+        drawNewLine();
+      }
     }
 
-    function drawNewLine() {
+    function printOutput(output) { 
+      var lines = output.split(/\r?\n/);
+      $.each(lines, function(i, line) {
+        var newLine = $('<li>');
+        newLine.html(escapeHTML(line));
+        TTY.screen.append(newLine);
+      });
+    }
+
+    function drawNewLine(promptStr) {
+      if (promptStr === undefined) promptStr = TTY.promptStr;
+
       var currentLine = $T("li.current");
       var newLine = currentLine.clone();
       currentLine.removeClass("current");
-      currentLine.html(TTY.promptStr + "&nbsp;" + escapeHTML(TTY.command.text()));
+      currentLine.html(TTY.prompt.html() + "&nbsp;" + escapeHTML(TTY.command.text()));
 
       newLine.find('.command').html('');
-      newLine.find('.cursor').addClass("show-cursor");
-      newLine.insertAfter(currentLine);
+      newLine.find('.after-cursor').html('');
+      newLine.find('.cursor').html("&nbsp;").addClass("show-cursor");
+      newLine.find('.prompt').html(escapeHTML(promptStr));
+      TTY.screen.append(newLine);
 
       TTY.command = $T('.command');
       TTY.cursor = $T('.cursor');
       TTY.afterCursor = $T('.after-cursor');
+      TTY.prompt = $T('.prompt');
       $T('#buffer').val('');
     }
   }
 
-  $.fn.tty = function(promptStr) {
-    TTY.init($(this), promptStr);
+  $.fn.tty = function(promptStr, readerFn) {
+    TTY.init($(this), promptStr, readerFn);
   }
 })(jQuery);
