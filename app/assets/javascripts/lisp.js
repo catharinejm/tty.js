@@ -39,7 +39,7 @@ $(function() {
     }
 
     typingEvent(document, "keypress", function(e) {
-      if (e.metaKey) return false;
+      if (e.metaKey) return;
 
       switch(e.which) {
       case 3: // C-c
@@ -59,7 +59,7 @@ $(function() {
         LISP.command.html(LISP.command.html() + "&nbsp;");
         break;
       default:
-        if (! e.altKey) LISP.command.text(LISP.command.text() + String.fromCharCode(e.which));
+        if (! (e.altKey || e.ctrlKey)) LISP.command.text(LISP.command.text() + String.fromCharCode(e.which));
       }
     });
 
@@ -68,7 +68,7 @@ $(function() {
     });
 
     typingEvent("#buffer", "keydown", function(e) {
-      if (e.metaKey) return false;
+      if (e.metaKey) return;
 
       switch (e.which) {
       // Backward delete
@@ -91,8 +91,8 @@ $(function() {
       case 46: // DEL
         var text = LISP.afterCursor.text();
         if (text) {
-          LISP.cursor.html(escapeSpaces(text[0]));
-          LISP.afterCursor.html(escapeSpaces(text.substr(1, text.length)));
+          LISP.cursor.html(escapeHTML(text[0]));
+          LISP.afterCursor.html(escapeHTML(text.substr(1, text.length)));
         }
         break;
 
@@ -142,8 +142,8 @@ $(function() {
     });
   }
 
-  function escapeSpaces(str) {
-    return str.replace(/\s/g, "&nbsp;");
+  function escapeHTML(str) {
+    return str.replace(/\s/g, "&nbsp;").replace(/>/g, "&gt;").replace(/</g, "&lt;");
   }
 
   function moveLeft() {
@@ -151,9 +151,9 @@ $(function() {
 
     var text = LISP.command.text();
     var afterText = LISP.afterCursor.text();
-    LISP.afterCursor.html(escapeSpaces(LISP.cursor.text() + afterText));
-    LISP.cursor.html(escapeSpaces(text[text.length-1]));
-    LISP.command.html(escapeSpaces(text.substr(0, text.length-1)));
+    LISP.afterCursor.html(escapeHTML(LISP.cursor.text() + afterText));
+    LISP.cursor.html(escapeHTML(text[text.length-1]));
+    LISP.command.html(escapeHTML(text.substr(0, text.length-1)));
   }
 
   function matchBack() {
@@ -166,21 +166,21 @@ $(function() {
 
     var before = match[1], after = match[2];
 
-    LISP.afterCursor.html(escapeSpaces(after.substr(1,after.length)) + LISP.cursor.html() + LISP.afterCursor.html());
-    LISP.cursor.html(escapeSpaces(after[0]));
-    LISP.command.html(escapeSpaces(before));
+    LISP.afterCursor.html(escapeHTML(after.substr(1,after.length)) + LISP.cursor.html() + LISP.afterCursor.html());
+    LISP.cursor.html(escapeHTML(after[0]));
+    LISP.command.html(escapeHTML(before));
   }
 
   function deleteBack() {
     var text = LISP.command.text();
-    LISP.command.html(escapeSpaces(text.substr(0, text.length-1)));
+    LISP.command.html(escapeHTML(text.substr(0, text.length-1)));
   }
 
   function deleteBackWord() {
     var match = matchBack();
 
     if (match)
-      LISP.command.html(escapeSpaces(match[1]));
+      LISP.command.html(escapeHTML(match[1]));
   }
 
   function moveRight() {
@@ -189,9 +189,9 @@ $(function() {
 
     var text = LISP.command.text();
 
-    LISP.command.html(escapeSpaces(text + LISP.cursor.text()));
-    LISP.cursor.html(escapeSpaces(afterText[0]));
-    LISP.afterCursor.html(escapeSpaces(afterText.substr(1, afterText.length)));
+    LISP.command.html(escapeHTML(text + LISP.cursor.text()));
+    LISP.cursor.html(escapeHTML(afterText[0]));
+    LISP.afterCursor.html(escapeHTML(afterText.substr(1, afterText.length)));
   }
 
   function matchForward() {
@@ -204,16 +204,16 @@ $(function() {
 
     var before = match[1], after = match[2];
 
-    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeSpaces(before));
-    LISP.cursor.html(escapeSpaces(after[0]));
-    LISP.afterCursor.html(escapeSpaces(after.substr(1, after.length)));
+    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeHTML(before));
+    LISP.cursor.html(escapeHTML(after[0]));
+    LISP.afterCursor.html(escapeHTML(after.substr(1, after.length)));
   }
 
   function deleteForward() {
     var text = LISP.afterCursor.text();
     if (text) {
-      LISP.cursor.html(escapeSpaces(text[0]));
-      LISP.afterCursor.html(escapeSpaces(text.substr(1, text.length)));
+      LISP.cursor.html(escapeHTML(text[0]));
+      LISP.afterCursor.html(escapeHTML(text.substr(1, text.length)));
     }
   }
 
@@ -221,16 +221,16 @@ $(function() {
     var match = matchForward();
     if (! match) return;
     var after = match[2];
-    LISP.cursor.html(escapeSpaces(after[0]));
-    LISP.afterCursor.html(escapeSpaces(after.substr(1, after.length)));
+    LISP.cursor.html(escapeHTML(after[0]));
+    LISP.afterCursor.html(escapeHTML(after.substr(1, after.length)));
   }
 
   function moveToBeginning() {
     var text = LISP.command.text();
     if (! text) return;
 
-    LISP.afterCursor.html(escapeSpaces(text.substr(1, text.length)) + LISP.cursor.html() + LISP.afterCursor.html());
-    LISP.cursor.html(escapeSpaces(text[0]));
+    LISP.afterCursor.html(escapeHTML(text.substr(1, text.length)) + LISP.cursor.html() + LISP.afterCursor.html());
+    LISP.cursor.html(escapeHTML(text[0]));
     LISP.command.html("");
   }
 
@@ -238,7 +238,7 @@ $(function() {
     var afterText = LISP.afterCursor.text();
     if (! afterText) return;
 
-    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeSpaces(afterText));
+    LISP.command.html(LISP.command.html() + LISP.cursor.html() + escapeHTML(afterText));
     LISP.cursor.html("&nbsp;");
     LISP.afterCursor.html('');
   }
@@ -251,7 +251,7 @@ $(function() {
     var currentLine = $("li.current");
     var newLine = currentLine.clone();
     currentLine.removeClass("current");
-    currentLine.html("REPL&gt;&nbsp" + escapeSpaces(LISP.command.text()));
+    currentLine.html("REPL&gt;&nbsp" + escapeHTML(LISP.command.text()));
 
     newLine.find('.command').html('');
     newLine.find('.cursor').addClass("show-cursor");
