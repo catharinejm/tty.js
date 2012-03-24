@@ -1,0 +1,3 @@
+$(function() {
+  $('#tty').tty("REPL>");
+});
