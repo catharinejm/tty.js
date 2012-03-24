@@ -268,8 +268,8 @@
       var output = TTY.readerFn(TTY.command.text());
       if (output === false) {
         var newPrompt = "", i;
-        for (i = 0; i < TTY.promptStr.length; i++) newPrompt += "&nbsp;";
-        drawNewLine(newPrompt);
+        for (i = TTY.promptStr.length-2; i > 0; i--) newPrompt += "&nbsp;";
+        drawNewLine(newPrompt+"->");
       } else {
         printOutput(output);
         drawNewLine();
