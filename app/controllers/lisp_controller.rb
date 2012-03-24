@@ -1,2 +1,0 @@
-class LispController < ApplicationController
-end
