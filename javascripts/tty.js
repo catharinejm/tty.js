@@ -259,8 +259,8 @@ TTY = {};
       var afterText = TTY.afterCursor.text();
       if (! afterText) return;
 
-      TTY.command.html(TTY.command.html() + TTY.cursor.html() + escapeHTML(afterText));
-      TTY.cursor.html("&nbsp;");
+      TTY.command.html(TTY.command.html() + TTY.cursor.html() + escapeHTML(afterText.substr(0, afterText.length-1)));
+      TTY.cursor.html(afterText[afterText.length-1]);
       TTY.afterCursor.html('');
     }
 
