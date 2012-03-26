@@ -37,6 +37,7 @@ function Fn(form, fn) {
   this.fn = fn;
   this.evalArgs = true;
   this.type = "Fn";
+  this.bindings = {};
 }
 
 (function($) {
@@ -49,11 +50,14 @@ function Fn(form, fn) {
   _b = Bindings;
 
   function init() {
-    var builtins = ["car", "cdr", "cons", {"quote":{evalArgs: false}}, {"eval":{fn:evalForm}}];
+    var builtins = ["car", "cdr", "cons", "type",
+                    {"quote": {evalArgs: false}},
+                    {"eval":  {fn: evalForm}},
+                    {"fn":    {evalArgs: false, fn: makeFn}}];
     $.each(builtins, function(i, sym) {
       var ext = {}, name = sym;
       if (typeof(sym) == "object") {
-        for (s in sym) name = s;
+        for (name in sym);
         ext = sym[name];
       }
       var newSym = new Symbol(name);
@@ -82,6 +86,10 @@ function Fn(form, fn) {
     return form.type || typeof(form);
   }
 
+  function makeFn(form) {
+
+  }
+
   REPL.readerFn = function(input) { 
     try {
       var inputStream = new StringStream(REPL.inputBuffer + input);
@@ -95,7 +103,7 @@ function Fn(form, fn) {
         REPL.inputBuffer = inputStream.string + "\n";
         return false;
       } else
-      return "READ ERROR: " + err;
+        return "READ ERROR: " + err;
     }
 
     try {
