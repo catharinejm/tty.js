@@ -19,26 +19,43 @@ StringStream.prototype.jump = function() {
 StringStream.prototype.isConsumed = function() { return this.index == this.length; }
 StringStream.prototype.rem = function() { return this.string.substr(this.index); }
 
-function Cons(car, cdr) {
-  this.car = car;
-  this.cdr = cdr;
-  this.quoted = false;
-  this.type = "Cons";
-}
-
-NIL = {type: "Nil", quoted: true}; // JS objects only == themselves, so this is OK for comparisons
-
-
-function Symbol(sym) {
-  this.sym = sym;
-  this.type = "Symbol";
-  this.quoted = false;
-}
-
 (function($) {
   var REPL = {
     inputBuffer: "",
     prompt: "REPL>"
+  }
+
+  function Cons(car, cdr) {
+    this.car = car;
+    this.cdr = cdr;
+    this.quoted = false;
+    this.type = "Cons";
+  }
+
+  NIL = {type: "Nil", quoted: true}; // JS objects only == themselves, so this is OK for comparisons
+
+  function Symbol(sym) {
+    this.sym = sym;
+    this.type = "Symbol";
+    this.quoted = false;
+  }
+
+  function Fn(form, fn) {
+    this.form = form;
+    this.fn = fn;
+  }
+
+  var Symbols = {};
+
+  var Bindings = {};
+
+  var Builtins = ["car", "cdr", "cons"];
+
+  function init() {
+    $.each(Builtins, function(i, sym) {
+      Symbols[sym] = new Symbol(sym);
+      Bindings[sym] = new Fn(Symbols[sym], eval(sym));
+    });
   }
 
   function UnterminatedInputError() {
@@ -170,6 +187,7 @@ function Symbol(sym) {
   }
 
   $.fn.repl = function() {
+    init();
     $(this).tty(REPL.prompt, REPL.readerFn);
   }
 })(jQuery);
