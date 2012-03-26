@@ -8,11 +8,14 @@ StringStream.prototype.getc = function() { return this.string[this.index++]; }
 StringStream.prototype.peek = function() { return this.string[this.index]; }
 StringStream.prototype.back = function() { this.index--; }
 StringStream.prototype.chunk = function(regex) { 
-  var match = (this.string.substr(this.index).match(regex || /^[^\s\(\)]*/) || [""])[0];
+  var match = (this.string.substr(this.index).match(regex || /^[^\s\n\(\)]*/) || [""])[0];
   this.index += match.length;
   return match; 
 }
-StringStream.prototype.jump = function() { while(/\s/.test(this.string[this.index])) this.index++; }
+StringStream.prototype.jump = function() { 
+  while(/[\s\n]/.test(this.string[this.index])) 
+    this.index++;
+}
 StringStream.prototype.isConsumed = function() { return this.index == this.length; }
 StringStream.prototype.rem = function() { return this.string.substr(this.index); }
 
@@ -38,6 +41,10 @@ function Symbol(sym) {
     prompt: "REPL>"
   }
 
+  function UnterminatedInputError() {
+    this.restartRead = true;
+  }
+
   function quote(form) { 
     form.quoted = true;
     return form; 
@@ -56,18 +63,25 @@ function Symbol(sym) {
 
   REPL.readerFn = function(input) { 
     try {
-      var inputStream = new StringStream(input);
+      var inputStream = new StringStream(REPL.inputBuffer + input);
       var form = readForm(inputStream);
+
+      REPL.inputBuffer = "";
       inputStream.jump();
       if (! inputStream.isConsumed()) throw("extraneous characters after end of input: \""+inputStream.rem()+'"');
       return printForm(form);
     } catch(err) {
-     return "READ ERROR: " + err;
+      if (err.restartRead) {
+        REPL.inputBuffer = inputStream.string + "\n";
+        return false;
+      } else
+      return "READ ERROR: " + err;
     }
   }
 
   function readForm(input) {
     input.jump();
+    if (input.isConsumed()) throw(new UnterminatedInputError());
     var cur = input.getc();
     if (cur == ')') throw('unexpected ")"');
 
@@ -130,7 +144,8 @@ function Symbol(sym) {
     var cur = input.getc();
     if (cur == ".") {
       var form = readForm(input);
-      input.getc();
+      input.jump();
+      if (input.getc() != ")") throw('only one form may come after " . "');
       return form;
     } else if (cur == ")")
       return NIL;
@@ -146,7 +161,7 @@ function Symbol(sym) {
       string += chunk;
       escapes = (string.match(/\\*$/) || [""])[0];
     } while (escapes.length & 1);
-    if (input.getc() != '"') throw("unterminated string");
+    if (input.getc() != '"') throw(new UnterminatedInputError(false));
     return string;
   }
 
