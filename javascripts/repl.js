@@ -130,32 +130,6 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
     return parsedNum;
   }
 
-  function printForm(form) {
-    switch(type(form)) {
-    case "number":
-      return form.toString();
-    case "string":
-      return '"'+form+'"';
-    case "Symbol":
-      return form.sym;
-    case "Nil":
-      return "()";
-    case "Cons":
-      return "("+printList(form)+")";
-    default:
-      throw('type "'+type(form)+'" is invalid');
-    }
-  }
-
-  function printList(form) {
-    if (cdr(form) == NIL)
-      return printForm(car(form));
-    else if (type(cdr(form)) != "Cons")
-      return printForm(car(form)) + " . " + printForm(cdr(form));
-    else
-      return printForm(car(form)) + " " + printList(cdr(form));
-  }
-
   function readList(input, idx) {
     input.jump();
     var cur = input.getc();
@@ -184,6 +158,32 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
 
   function readSymbol(input) {
     return new Symbol(input.chunk());
+  }
+
+  function printForm(form) {
+    switch(type(form)) {
+    case "number":
+      return form.toString();
+    case "string":
+      return '"'+form+'"';
+    case "Symbol":
+      return form.sym;
+    case "Nil":
+      return "()";
+    case "Cons":
+      return "("+printList(form)+")";
+    default:
+      throw('type "'+type(form)+'" is invalid');
+    }
+  }
+
+  function printList(form) {
+    if (cdr(form) == NIL)
+      return printForm(car(form));
+    else if (type(cdr(form)) != "Cons")
+      return printForm(car(form)) + " . " + printForm(cdr(form));
+    else
+      return printForm(car(form)) + " " + printList(cdr(form));
   }
 
   $.fn.repl = function() {
