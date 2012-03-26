@@ -22,21 +22,20 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
 function Cons(car, cdr) {
   this.car = car;
   this.cdr = cdr;
-  this.isQuoted = false;
   this.type = "Cons";
 }
 
-NIL = {type: "Nil", isQuoted: true}; // JS objects only == themselves, so this is OK for comparisons
+NIL = {type: "Cons"}; // JS objects only == themselves, so this is OK for comparisons
 
 function Symbol(sym) {
   this.sym = sym;
   this.type = "Symbol";
-  this.isQuoted = false;
 }
 
 function Fn(form, fn) {
   this.form = form;
   this.fn = fn;
+  this.evalArgs = true;
   this.type = "Fn";
 }
 
@@ -46,16 +45,21 @@ function Fn(form, fn) {
     prompt: "REPL>"
   }
 
-  var Symbols = {};
-
   var Bindings = {};
-
-  var Builtins = ["car", "cdr", "cons", "quote"];
+  _b = Bindings;
 
   function init() {
-    $.each(Builtins, function(i, sym) {
-      Symbols[sym] = new Symbol(sym);
-      Bindings[sym] = new Fn(Symbols[sym], eval(sym));
+    var builtins = ["car", "cdr", "cons", {"quote":{evalArgs: false}}, {"eval":{fn:evalForm}}];
+    $.each(builtins, function(i, sym) {
+      var ext = {}, name = sym;
+      if (typeof(sym) == "object") {
+        for (s in sym) name = s;
+        ext = sym[name];
+      }
+      var newSym = new Symbol(name);
+      var newFn = new Fn(newSym, ext.fn || eval(name));
+      $.extend(newFn, ext);
+      Bindings[name] = newFn;
     });
   }
 
@@ -64,7 +68,6 @@ function Fn(form, fn) {
   }
 
   function quote(form) { 
-    form.isQuoted = true;
     return form; 
   }
 
@@ -111,9 +114,9 @@ function Fn(form, fn) {
     if (/\d/.test(cur)) {
       input.back();
       return readNumber(input);
-    } else if (cur == "'")
-      return quote(readForm(input));
-    else if (cur == '(')
+    } else if (cur == "'") {
+      return cons(new Symbol("quote"), cons(readForm(input), NIL));
+    } else if (cur == '(')
       return readList(input);
     else if (cur == '"')
       return readString(input);
@@ -167,19 +170,39 @@ function Fn(form, fn) {
   }
 
   function evalForm(form) {
-    if (form.isQuoted) return form;
     switch (type(form)) {
       case "number":
       case "string":
         return form;
       case "Symbol":
-        var sym = Symbols[form.sym];
-        if (! sym) throw("undefined symbol: " + form.sym);
-        return sym;
+        var binding = Bindings[form.sym];
+        if (binding === undefined) throw("undefined symbol: " + form.sym);
+        if (binding === null) throw("unbound symbol: " + form.sym);
+        return binding;
       case "Cons":
-        if (type(car(form)) != "Fn") throw(printForm(car(form)) + " cannot be in function position");
-        return "function call";
+        var fn = evalForm(car(form));
+        if (type(fn) != "Fn") throw(printForm(car(form)) + " is not a function");
+        var args = cdr(form);
+        if (fn.evalArgs) args = evalList(args);
+        return fn.fn.apply(fn, listToArray(args));
     }
+  }
+
+  function evalList(list) {
+    if (list == NIL)
+      return NIL;
+    else
+      return cons(evalForm(car(list)), evalList(cdr(list)));
+  }
+
+  function listToArray(list) {
+    var ary = [];
+    while (list != NIL) {
+      ary.push(car(list));
+      list = cdr(list);
+      if (type(list) != "Cons") throw("invalid use of irregular list");
+    }
+    return ary;
   }
 
   function printForm(form) {
