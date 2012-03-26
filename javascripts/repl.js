@@ -19,31 +19,31 @@ StringStream.prototype.jump = function() {
 StringStream.prototype.isConsumed = function() { return this.index == this.length; }
 StringStream.prototype.rem = function() { return this.string.substr(this.index); }
 
+function Cons(car, cdr) {
+  this.car = car;
+  this.cdr = cdr;
+  this.isQuoted = false;
+  this.type = "Cons";
+}
+
+NIL = {type: "Nil", isQuoted: true}; // JS objects only == themselves, so this is OK for comparisons
+
+function Symbol(sym) {
+  this.sym = sym;
+  this.type = "Symbol";
+  this.isQuoted = false;
+}
+
+function Fn(form, fn) {
+  this.form = form;
+  this.fn = fn;
+  this.type = "Fn";
+}
+
 (function($) {
   var REPL = {
     inputBuffer: "",
     prompt: "REPL>"
-  }
-
-  function Cons(car, cdr) {
-    this.car = car;
-    this.cdr = cdr;
-    this.isQuoted = false;
-    this.type = "Cons";
-  }
-
-  NIL = {type: "Nil", isQuoted: true}; // JS objects only == themselves, so this is OK for comparisons
-
-  function Symbol(sym) {
-    this.sym = sym;
-    this.type = "Symbol";
-    this.isQuoted = false;
-  }
-
-  function Fn(form, fn) {
-    this.form = form;
-    this.fn = fn;
-    this.type = "Fn";
   }
 
   var Symbols = {};
