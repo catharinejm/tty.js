@@ -28,28 +28,29 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
   function Cons(car, cdr) {
     this.car = car;
     this.cdr = cdr;
-    this.quoted = false;
+    this.isQuoted = false;
     this.type = "Cons";
   }
 
-  NIL = {type: "Nil", quoted: true}; // JS objects only == themselves, so this is OK for comparisons
+  NIL = {type: "Nil", isQuoted: true}; // JS objects only == themselves, so this is OK for comparisons
 
   function Symbol(sym) {
     this.sym = sym;
     this.type = "Symbol";
-    this.quoted = false;
+    this.isQuoted = false;
   }
 
   function Fn(form, fn) {
     this.form = form;
     this.fn = fn;
+    this.type = "Fn";
   }
 
   var Symbols = {};
 
   var Bindings = {};
 
-  var Builtins = ["car", "cdr", "cons"];
+  var Builtins = ["car", "cdr", "cons", "quote"];
 
   function init() {
     $.each(Builtins, function(i, sym) {
@@ -63,7 +64,7 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
   }
 
   function quote(form) { 
-    form.quoted = true;
+    form.isQuoted = true;
     return form; 
   }
 
@@ -86,13 +87,18 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
       REPL.inputBuffer = "";
       inputStream.jump();
       if (! inputStream.isConsumed()) throw("extraneous characters after end of input: \""+inputStream.rem()+'"');
-      return printForm(form);
     } catch(err) {
       if (err.restartRead) {
         REPL.inputBuffer = inputStream.string + "\n";
         return false;
       } else
       return "READ ERROR: " + err;
+    }
+
+    try {
+      return printForm(evalForm(form));
+    } catch(err) {
+      return "EVAL ERROR: " + err;
     }
   }
 
@@ -160,6 +166,22 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
     return new Symbol(input.chunk());
   }
 
+  function evalForm(form) {
+    if (form.isQuoted) return form;
+    switch (type(form)) {
+      case "number":
+      case "string":
+        return form;
+      case "Symbol":
+        var sym = Symbols[form.sym];
+        if (! sym) throw("undefined symbol: " + form.sym);
+        return sym;
+      case "Cons":
+        if (type(car(form)) != "Fn") throw(printForm(car(form)) + " cannot be in function position");
+        return "function call";
+    }
+  }
+
   function printForm(form) {
     switch(type(form)) {
     case "number":
@@ -172,6 +194,8 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
       return "()";
     case "Cons":
       return "("+printList(form)+")";
+    case "Fn":
+      return printForm(form.form);
     default:
       throw('type "'+type(form)+'" is invalid');
     }
