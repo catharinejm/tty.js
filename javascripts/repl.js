@@ -25,19 +25,18 @@ function Cons(car, cdr) {
   this.type = "Cons";
 }
 
-NIL = {type: "Cons"}; // JS objects only == themselves, so this is OK for comparisons
+NIL = new Cons(); // JS objects only == themselves, so this is OK for comparisons
 
 function Symbol(sym) {
   this.sym = sym;
   this.type = "Symbol";
 }
 
-function Fn(form, fn) {
+function Fn(form, fn, evalArgs) {
   this.form = form;
   this.fn = fn;
-  this.evalArgs = true;
+  this.evalArgs = evalArgs;
   this.type = "Fn";
-  this.bindings = {};
 }
 
 (function($) {
@@ -46,13 +45,32 @@ function Fn(form, fn) {
     prompt: "REPL>"
   }
 
-  var Bindings = {};
+  function Bindings() { }
+  Bindings.Core = function() { }
+
   _b = Bindings;
+
+  function makeFn(form, evalArgs) {
+    if (cdr(form) == NIL) throw("fn cannot be empty");
+    var args = car(cdr(form)), body = cdr(cdr(form));
+    if (type(args) != "Cons") throw("fn is missing arglist");
+    var argList = listToArray(args);
+    for (a in argList) if (type(a) != "Symbol") throw("only Symbols may be fn args");
+
+    var fn = function() {
+      for (i in argList) fn[argList[i].sym] = arguments[i];
+      return evalList.call(fn, body); 
+    }
+    fn.prototype = new this();
+    return new Fn(cons(new Symbol("fn"), form), fn, evalArgs);
+  }
 
   function init() {
     var builtins = ["car", "cdr", "cons", "type",
                     {"quote": {evalArgs: false}},
+                    {"read":  {fn: readForm}},
                     {"eval":  {fn: evalForm}},
+                    {"print": {fn: printForm}},
                     {"fn":    {evalArgs: false, fn: makeFn}}];
     $.each(builtins, function(i, sym) {
       var ext = {}, name = sym;
@@ -63,7 +81,7 @@ function Fn(form, fn) {
       var newSym = new Symbol(name);
       var newFn = new Fn(newSym, ext.fn || eval(name));
       $.extend(newFn, ext);
-      Bindings[name] = newFn;
+      Bindings.Core.prototype[name] = newFn;
     });
   }
 
@@ -86,10 +104,6 @@ function Fn(form, fn) {
     return form.type || typeof(form);
   }
 
-  function makeFn(form) {
-
-  }
-
   REPL.readerFn = function(input) { 
     try {
       var inputStream = new StringStream(REPL.inputBuffer + input);
@@ -107,7 +121,7 @@ function Fn(form, fn) {
     }
 
     try {
-      return printForm(evalForm(form));
+      return printForm(evalForm.call(new Bindings.Core(), form));
     } catch(err) {
       return "EVAL ERROR: " + err;
     }
@@ -183,16 +197,16 @@ function Fn(form, fn) {
       case "string":
         return form;
       case "Symbol":
-        var binding = Bindings[form.sym];
+        var binding = this[form.sym];
         if (binding === undefined) throw("undefined symbol: " + form.sym);
         if (binding === null) throw("unbound symbol: " + form.sym);
         return binding;
       case "Cons":
-        var fn = evalForm(car(form));
+        var fn = evalForm.call(this, car(form));
         if (type(fn) != "Fn") throw(printForm(car(form)) + " is not a function");
         var args = cdr(form);
-        if (fn.evalArgs) args = evalList(args);
-        return fn.fn.apply(fn, listToArray(args));
+        if (fn.evalArgs) args = evalList.call(this, args);
+        return fn.fn.apply(this, listToArray(args));
     }
   }
 
@@ -200,7 +214,7 @@ function Fn(form, fn) {
     if (list == NIL)
       return NIL;
     else
-      return cons(evalForm(car(list)), evalList(cdr(list)));
+      return cons(evalForm.call(this, car(list)), evalList.call(this, cdr(list)));
   }
 
   function listToArray(list) {
