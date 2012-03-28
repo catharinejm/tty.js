@@ -69,7 +69,7 @@ function Fn(form, fn) {
     } else 
       var fn = function() { return NIL; };
 
-    return new Fn("FORM", fn);
+    return new Fn(this.__curForm, fn);
   }
 
   function init() {
@@ -85,7 +85,7 @@ function Fn(form, fn) {
         for (name in sym);
         ext = sym[name];
       }
-      var newSym = new Symbol(name);
+      var newSym = new Symbol("#<primitive:"+name+">");
       var newFn = new Fn(newSym, ext.fn || eval(name));
       $.extend(newFn, ext);
       Bindings.Core.prototype[name] = newFn;
@@ -98,10 +98,12 @@ function Fn(form, fn) {
   }
 
   function def(sym, binding) {
-    debugger;
-    if (type(sym) != "Symbol") throw("invalid binding");
-    this[sym.sym] = evalForm(binding);
-    return this[sym.sym];
+    if (type(sym) != "Symbol") throw("must bind to symbol");
+    if (binding === undefined)
+      this[sym.sym] = null;
+    else
+      this[sym.sym] = evalForm.call(this, binding);
+    return sym;
   }
 
   function quote(form) { 
@@ -135,11 +137,11 @@ function Fn(form, fn) {
         return "READ ERROR: " + err;
     }
 
-    // try {
+    try {
       return printForm(evalForm.call(REPL.bindings, form));
-    // } catch(err) {
-    //   return "EVAL ERROR: " + err;
-    // }
+    } catch(err) {
+      return "EVAL ERROR: " + err;
+    }
   }
 
   function readForm(input) {
@@ -198,7 +200,7 @@ function Fn(form, fn) {
       string += chunk;
       escapes = (string.match(/\\*$/) || [""])[0];
     } while (escapes.length & 1);
-    if (input.getc() != '"') throw(new UnterminatedInputError(false));
+    if (input.getc() != '"') throw(new UnterminatedInputError());
     return string;
   }
 
@@ -221,7 +223,10 @@ function Fn(form, fn) {
         if (type(fn) != "Fn") throw(printForm(fn) + " is not a function");
         var args = cdr(form);
         if (fn.evalArgs) args = evalList.call(this, args);
-        return fn.fn.apply(this, listToArray(args));
+        this.__curForm = form;
+        var rval = fn.fn.apply(this, listToArray(args));
+        this.__curForm = undefined;
+        return rval;
     }
   }
 
