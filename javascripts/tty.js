@@ -16,6 +16,7 @@
     TTY.prompt = $T('span.prompt');
     TTY.prompt.html(escapeHTML(TTY.promptStr));
     TTY.readerFn = readerFn;
+    TTY.inputBuffer = "";
 
 
     blinkCursor(800);
@@ -265,12 +266,14 @@
     }
 
     function consumeLine() {
-      var output = TTY.readerFn(TTY.command.text());
+      var output = TTY.readerFn(TTY.inputBuffer + TTY.command.text());
       if (output === false) {
+        TTY.inputBuffer += TTY.command.text() + "\n";
         var newPrompt = "", i;
         for (i = TTY.promptStr.length-2; i > 0; i--) newPrompt += "&nbsp;";
         drawNewLine(newPrompt+"->");
       } else {
+        TTY.inputBuffer = "";
         printOutput(output);
         drawNewLine();
       }

@@ -41,7 +41,6 @@ function Fn(form, fn) {
 
 (function($) {
   var REPL = {
-    inputBuffer: "",
     prompt: "REPL>"
   }
 
@@ -123,15 +122,13 @@ function Fn(form, fn) {
 
   REPL.readerFn = function(input) { 
     try {
-      var inputStream = new StringStream(REPL.inputBuffer + input);
+      var inputStream = new StringStream(input);
       var form = readForm(inputStream);
 
-      REPL.inputBuffer = "";
       inputStream.jump();
       if (! inputStream.isConsumed()) throw("extraneous characters after end of input: \""+inputStream.rem()+'"');
     } catch(err) {
       if (err.restartRead) {
-        REPL.inputBuffer = inputStream.string + "\n";
         return false;
       } else
         return "READ ERROR: " + err;
