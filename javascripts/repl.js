@@ -22,21 +22,21 @@ StringStream.prototype.rem = function() { return this.string.substr(this.index);
 function Cons(car, cdr) {
   this.car = car;
   this.cdr = cdr;
-  this.type = "Cons";
+  this.__type = "Cons";
 }
 
 NIL = new Cons(); // JS objects only == themselves, so this is OK for comparisons
 
 function Symbol(sym) {
   this.sym = sym;
-  this.type = "Symbol";
+  this.__type = "Symbol";
 }
 
 function Fn(form, fn) {
   this.form = form;
   this.fn = fn;
   this.evalArgs = true;
-  this.type = "Fn";
+  this.__type = "Fn";
 }
 
 (function($) {
@@ -72,12 +72,14 @@ function Fn(form, fn) {
   }
 
   function init() {
-    var builtins = ["car", "cdr", "cons", "type",
+    var builtins = ["car", "cdr", "cons", "type", "call",
                     {"quote": {evalArgs: false}},
                     {"eval":  {fn: evalForm}},
                     {"print": {fn: printForm}},
                     {"fn":    {evalArgs: false, fn: makeFn}},
-                    {"def":   {evalArgs: false}}];
+                    {"def":   {evalArgs: false}},
+                    {"refer": {evalArgs: false}},
+                    {"..":    {evalArgs: false, fn: jsAttrChain}}];
     $.each(builtins, function(i, sym) {
       var ext = {}, name = sym;
       if (typeof(sym) == "object") {
@@ -89,11 +91,58 @@ function Fn(form, fn) {
       $.extend(newFn, ext);
       Bindings.Core.prototype[name] = newFn;
     });
+    Bindings.Core.prototype["true"] = true;
+    Bindings.Core.prototype["false"] = false;
     REPL.bindings = new Bindings.Core();
   }
 
   function UnterminatedInputError() {
     this.restartRead = true;
+  }
+
+  function call() {
+    var jsFn = arguments[0], args = Array.apply(null, arguments).slice(1);
+    return jsFn.apply(jsFn, args);
+  }
+
+  function jsAttrChain() {
+    var jsObj = evalForm.call(this, arguments[0]);
+    var attrs = Array.apply(null, arguments).slice(1);
+    for (i in attrs) {
+      var attr = attrs[i];
+      switch (type(attr)) {
+      case "Symbol":
+        jsObj = jsObj[attr.sym];
+        break;
+      case "Cons":
+        var args = evalList.call(this, cdr(attr));
+        jsObj = jsObj[car(attr).sym].apply(jsObj, listToArray(args));
+        break;
+      default:
+        throw("attribute access requires lists or symbols");
+      }
+    }
+    return jsObj;
+  }
+
+  function refer() {
+    for (i in arguments) {
+      var ref = arguments[i];
+      switch (type(ref)) {
+      case "Cons":
+        this[car(ref).sym] = eval(cdr(ref));
+        break;
+      case "Symbol":
+        this[ref.sym] = eval(ref.sym);
+        break;
+      case "string":
+        this[ref] = eval(ref);
+        break;
+      default:
+        throw("invalid refer: " + ref);
+      }
+    }
+    return NIL;
   }
 
   function def(sym, binding) {
@@ -117,7 +166,8 @@ function Fn(form, fn) {
   function cdr(cons) { return cons.cdr; }
 
   function type(form) {
-    return form.type || typeof(form);
+    if (form === null) return "null";
+    return form.__type || typeof(form);
   }
 
   REPL.readerFn = function(input) { 
@@ -178,7 +228,7 @@ function Fn(form, fn) {
   function readList(input, idx) {
     input.jump();
     var cur = input.getc();
-    if (cur == ".") {
+    if (cur == "." && input.peek() == " ") {
       var form = readForm(input);
       input.jump();
       if (input.getc() != ")") throw('only one form may come after " . "');
@@ -207,9 +257,6 @@ function Fn(form, fn) {
 
   function evalForm(form) {
     switch (type(form)) {
-      case "number":
-      case "string":
-        return form;
       case "Symbol":
         var binding = this[form.sym];
         if (binding === undefined) throw("undefined symbol: " + form.sym);
@@ -217,13 +264,23 @@ function Fn(form, fn) {
         return binding;
       case "Cons":
         var fn = evalForm.call(this, car(form));
-        if (type(fn) != "Fn") throw(printForm(fn) + " is not a function");
-        var args = cdr(form);
-        if (fn.evalArgs) args = evalList.call(this, args);
-        this.__curForm = form;
-        var rval = fn.fn.apply(this, listToArray(args));
-        this.__curForm = undefined;
-        return rval;
+
+        if (type(fn) == "function") {
+          var args = listToArray(evalList.call(this, cdr(form)));
+          return fn.call(this, args);
+        } else if (type(fn) == "Fn") {
+          var args = cdr(form);
+          if (fn.evalArgs) args = evalList.call(this, args);
+
+          this.__curForm = form;
+          var rval = fn.fn.apply(this, listToArray(args));
+          this.__curForm = undefined;
+          return rval;
+
+        } else 
+          throw(printForm(fn) + " is not a function");
+      default:
+        return form;
     }
   }
 
@@ -245,10 +302,10 @@ function Fn(form, fn) {
   }
 
   function printForm(form) {
+    if (form === null) return "null";
+    if (form === undefined) return "undefined";
     if (form == NIL) return "()";
     switch(type(form)) {
-    case "number":
-      return form.toString();
     case "string":
       return '"'+form+'"';
     case "Symbol":
@@ -258,7 +315,7 @@ function Fn(form, fn) {
     case "Fn":
       return printForm(form.form);
     default:
-      throw('type "'+type(form)+'" is invalid');
+      return form.toString();
     }
   }
 
