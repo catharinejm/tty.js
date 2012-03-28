@@ -141,7 +141,7 @@ function Fn(form, fn) {
       var ref = arguments[i];
       switch (type(ref)) {
       case "Cons":
-        this[car(ref).sym] = eval(cdr(ref));
+        this[cdr(ref).sym] = eval(car(ref).sym);
         break;
       case "Symbol":
         this[ref.sym] = eval(ref.sym);
@@ -239,7 +239,7 @@ function Fn(form, fn) {
   function readList(input, idx) {
     input.jump();
     var cur = input.getc();
-    if (cur == "." && input.peek() == " ") {
+    if (cur == "." && /\s/.test(input.peek())) {
       var form = readForm(input);
       input.jump();
       if (input.getc() != ")") throw('only one form may come after " . "');
