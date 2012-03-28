@@ -108,18 +108,11 @@ function Fn(form, fn) {
     } catch(err) { // Some native functions can't be called with #apply
       console.log(err);
       var dateStr = (new Date()).toJSON().replace(/\W/g, "");
-      var argsContainer = "__native_function_args__"+dateStr;
-      var fnContainer = "__native_function__"+dateStr;
-      eval(argsContainer+" = args");
-      eval(fnContainer+" = jsFn");
 
       var strArgs = [];
-      for (i in args) strArgs.push(argsContainer+"["+i+"]");
+      for (i in args) strArgs.push("args["+i+"]");
 
-      return eval(fnContainer+"("+strArgs.join(",")+")");
-    } finally {
-      eval("delete "+fnContainer);
-      eval("delete "+argsContainer);
+      return eval("jsFn("+strArgs.join(",")+")");
     }
   }
 
