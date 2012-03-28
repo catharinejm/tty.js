@@ -101,13 +101,31 @@ function Fn(form, fn) {
   }
 
   function call() {
-    var jsFn = arguments[0], args = Array.apply(null, arguments).slice(1);
-    return jsFn.apply(jsFn, args);
+    var jsFn = arguments[0], args = Array.apply(Array, arguments).slice(1);
+    if (type(jsFn) != "function") throw("call may only be used on native functions");
+    try {
+      return jsFn.apply(jsFn, args);
+    } catch(err) { // Some native functions can't be called with #apply
+      console.log(err);
+      var dateStr = (new Date()).toJSON().replace(/\W/g, "");
+      var argsContainer = "__native_function_args__"+dateStr;
+      var fnContainer = "__native_function__"+dateStr;
+      eval(argsContainer+" = args");
+      eval(fnContainer+" = jsFn");
+
+      var strArgs = [];
+      for (i in args) strArgs.push(argsContainer+"["+i+"]");
+
+      return eval(fnContainer+"("+strArgs.join(",")+")");
+    } finally {
+      eval("delete "+fnContainer);
+      eval("delete "+argsContainer);
+    }
   }
 
   function jsAttrChain() {
     var jsObj = evalForm.call(this, arguments[0]);
-    var attrs = Array.apply(null, arguments).slice(1);
+    var attrs = Array.apply(Array, arguments).slice(1);
     for (i in attrs) {
       var attr = attrs[i];
       switch (type(attr)) {
@@ -267,7 +285,8 @@ function Fn(form, fn) {
 
         if (type(fn) == "function") {
           var args = listToArray(evalList.call(this, cdr(form)));
-          return fn.call(this, args);
+          args.unshift(fn);
+          return call.apply(fn, args);
         } else if (type(fn) == "Fn") {
           var args = cdr(form);
           if (fn.evalArgs) args = evalList.call(this, args);
