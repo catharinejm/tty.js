@@ -17,6 +17,9 @@
     TTY.prompt.html(escapeHTML(TTY.promptStr));
     TTY.readerFn = readerFn;
     TTY.inputBuffer = "";
+    TTY.history = [];
+    TTY.historyIdx = -1;
+    TTY.commandCache = "";
 
 
     blinkCursor(800);
@@ -63,6 +66,7 @@
         switch(e.which) {
         case 3: // C-c
           TTY.command.text(TTY.command.text() + "^C");
+          TTY.commandCache = "";
           drawNewLine();
           break;
         case 12: // C-l
@@ -73,9 +77,7 @@
           consumeLine();
           break;
         case 21: // C-u
-          TTY.command.html("");
-          TTY.cursor.html("&nbsp;");
-          TTY.afterCursor.html("");
+          clearLine();
           break;
         case 32: // Space
           TTY.command.html(TTY.command.html() + "&nbsp;");
@@ -91,8 +93,21 @@
 
       typingEvent("#buffer", "keydown", function(e) {
         if (e.metaKey) return;
+        console.log(e.which);
 
         switch (e.which) {
+        // History back
+        case 38:
+          if (! (e.ctrlKey || e.altKey))
+            historyBack();
+          break;
+
+        // History forward
+        case 40:
+          if (! (e.ctrlKey || e.altKey))
+            historyForward();
+          break;
+
         // Backward delete
         case 72: // H
           if (e.ctrlKey)
@@ -291,6 +306,37 @@
       TTY.command.html(escapeHTML(newCommand));
     }
 
+    function cacheLine() {
+      moveToEnd();
+      TTY.commandCache = TTY.command.text();
+    }
+
+    function clearLine() {
+      TTY.command.html("");
+      TTY.cursor.html("&nbsp;");
+      TTY.afterCursor.html("");
+    }
+
+    function historyBack() {
+      var prevCommand = TTY.history[TTY.historyIdx+1];
+      if (prevCommand) {
+        if (TTY.historyIdx == -1) cacheLine();
+        clearLine();
+        TTY.command.html(escapeHTML(prevCommand));
+        TTY.historyIdx++;
+      }
+    }
+
+    function historyForward() {
+      var nextCommand = TTY.history[TTY.historyIdx-1];
+      if (nextCommand) {
+        clearLine();
+        TTY.command.html(escapeHTML(nextCommand));
+        TTY.historyIdx--;
+      } else
+        TTY.command.html(escapeHTML(TTY.commandCache));
+    }
+
     function consumeLine() {
       var output = TTY.readerFn(TTY.inputBuffer + TTY.command.text());
       if (output === false) {
@@ -299,7 +345,10 @@
         for (i = TTY.promptStr.length-2; i > 0; i--) newPrompt += "&nbsp;";
         drawNewLine(newPrompt+"->");
       } else {
+        TTY.history.unshift(TTY.inputBuffer + TTY.command.text());
+        TTY.historyIdx = -1;
         TTY.inputBuffer = "";
+        TTY.commandCache = "";
         printOutput(output);
         drawNewLine();
       }
