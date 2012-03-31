@@ -95,7 +95,9 @@
         switch (e.which) {
         // Backward delete
         case 72: // H
-          if (! e.ctrlKey) break;
+          if (e.ctrlKey)
+            deleteBack();
+          break;
         case 8: // Backspace
           if (e.ctrlKey || e.altKey)
             deleteBackWord();
@@ -159,6 +161,12 @@
           if (! e.ctrlKey) break;
         case 34: // End
           moveToEnd();
+          break;
+
+        // Swap chars
+        case 84: // T
+          if (e.ctrlKey)
+            swapChars();
           break;
         }
       });
@@ -263,6 +271,24 @@
       TTY.command.html(TTY.command.html() + TTY.cursor.html() + escapeHTML(afterText.substr(0, afterText.length-1)));
       TTY.cursor.html(afterText[afterText.length-1]);
       TTY.afterCursor.html('');
+    }
+
+    function swapChars() {
+      debugger;
+      if (TTY.command.text()) {
+        moveRight();
+      } else if (TTY.afterCursor.text()) {
+        moveRight();
+        moveRight();
+      }
+      var command = TTY.command.text();
+      var formerChar = command[command.length-2];
+      var latterChar = command[command.length-1];
+
+      var newCommand = command.substr(0, command.length-2);
+      if (latterChar) newCommand += latterChar;
+      if (formerChar) newCommand += formerChar;
+      TTY.command.html(escapeHTML(newCommand));
     }
 
     function consumeLine() {
