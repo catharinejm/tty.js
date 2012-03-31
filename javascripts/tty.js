@@ -67,6 +67,7 @@
         case 3: // C-c
           TTY.command.text(TTY.command.text() + "^C");
           TTY.commandCache = "";
+          TTY.historyIdx = -1;
           drawNewLine();
           break;
         case 12: // C-l
