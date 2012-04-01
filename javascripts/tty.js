@@ -85,6 +85,7 @@
           drawNewLine();
           break;
         case 12: // C-l
+          setRows();
           $T("li.current").prevAll().hide();
           break;
         case 13: // CR
