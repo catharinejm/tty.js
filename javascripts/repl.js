@@ -139,13 +139,15 @@ function Fn(form, fn) {
       var ref = arguments[i];
       switch (type(ref)) {
       case "Cons":
-        this[cdr(ref).sym] = eval(car(ref).sym);
+        if (type(car(ref)) != "Symbol" && type(car(ref)) != "string" || type(cdr(ref)) != "Symbol" && type(cdr(ref)) != "string")
+          throw("refer takes a string, symbol or non-list pair of strings and/or symbols");
+        this[cdr(ref).sym] = eval.call(window, car(ref).sym);
         break;
       case "Symbol":
-        this[ref.sym] = eval(ref.sym);
+        this[ref.sym] = eval.call(window, ref.sym);
         break;
       case "string":
-        this[ref] = eval(ref);
+        this[ref] = eval.call(window, ref);
         break;
       default:
         throw("invalid refer: " + ref);
