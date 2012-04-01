@@ -33,7 +33,7 @@
       if (oldRows < TTY.rows)
         TTY.screen.find('li:hidden').slice(oldRows - TTY.rows).show();
       else if (oldRows > TTY.rows)
-        TTY.screen.find('li:visible:lt('+oldRows-TTY.rows+')').hide();
+        TTY.screen.find('li:visible:lt('+(oldRows - TTY.rows)+')').hide();
     });
 
     blinkCursor(1000);
