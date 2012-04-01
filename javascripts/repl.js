@@ -47,6 +47,7 @@ function Fn(form, fn) {
   function Bindings() { }
   Bindings.Core = function() { }
 
+  // TODO: This is just for debugging! Remove it for stable release.
   _b = Bindings;
 
   function makeFn(argList, body) {
@@ -106,9 +107,6 @@ function Fn(form, fn) {
     try {
       return jsFn.apply(jsFn, args);
     } catch(err) { // Some native functions can't be called with #apply
-      console.log(err);
-      var dateStr = (new Date()).toJSON().replace(/\W/g, "");
-
       var strArgs = [];
       for (i in args) strArgs.push("args["+i+"]");
 

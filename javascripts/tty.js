@@ -5,7 +5,7 @@
     TTY.console = jqObj;
     initConsole();
 
-    var $T = TTY.console.find.bind(TTY.console);
+    var $T = function(selector) { return TTY.console.find(selector); }
 
     TTY.screen = $T('ul');
     TTY.command = $T('span.command');
@@ -20,9 +20,23 @@
     TTY.history = [];
     TTY.historyIdx = -1;
     TTY.commandCache = "";
+    setRows();
 
+    function setRows() {
+      var rows = parseInt($(window).height() / 20) - 7;
+      TTY.rows = (rows > 1) ? rows : 1;
+    }
 
-    blinkCursor(800);
+    $(window).resize(function() {
+      var oldRows = TTY.rows;
+      setRows();
+      if (oldRows < TTY.rows)
+        TTY.screen.find('li:hidden').slice(oldRows - TTY.rows).show();
+      else if (oldRows > TTY.rows)
+        TTY.screen.find('li:visible:lt('+oldRows-TTY.rows+')').hide();
+    });
+
+    blinkCursor(1000);
     captureKeys();
 
     function initConsole() {
@@ -71,7 +85,7 @@
           drawNewLine();
           break;
         case 12: // C-l
-          $T("li.current").prevAll().remove();
+          $T("li.current").prevAll().hide();
           break;
         case 13: // CR
           moveToEnd();
@@ -94,7 +108,6 @@
 
       typingEvent("#buffer", "keydown", function(e) {
         if (e.metaKey) return;
-        console.log(e.which);
 
         switch (e.which) {
         // History back
@@ -360,6 +373,8 @@
       $.each(lines, function(i, line) {
         var newLine = $('<li>');
         newLine.html(escapeHTML(line));
+        if (TTY.screen.find('li:visible').length >= TTY.rows)
+          TTY.screen.find('li:visible:first').hide();
         TTY.screen.append(newLine);
       });
     }
@@ -376,6 +391,10 @@
       newLine.find('.after-cursor').html('');
       newLine.find('.cursor').html("&nbsp;").addClass("show-cursor");
       newLine.find('.prompt').html(escapeHTML(promptStr));
+
+      if (TTY.screen.find('li:visible').length >= TTY.rows)
+        TTY.screen.find('li:visible:first').hide();
+
       TTY.screen.append(newLine);
 
       TTY.command = $T('.command');
